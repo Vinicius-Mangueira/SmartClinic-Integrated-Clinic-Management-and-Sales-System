@@ -1,30 +1,33 @@
-from __future__ import annotations
-
 import os
 from contextlib import contextmanager
-from typing import Iterator, Optional
 
 import mysql.connector
-from mysql.connector import MySQLConnection
 from dotenv import load_dotenv
 
-load_dotenv()
+
+# Carrega as variáveis do arquivo secreto.env
+load_dotenv("secreto.env")
 
 
-def _get_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Variável de ambiente ausente: {name}")
-    return value
+def _get_env(nome_variavel: str) -> str:
+    """
+    Busca uma variável de ambiente e lança erro se ela não existir.
+    """
+    valor = os.getenv(nome_variavel)
+    if not valor:
+        raise RuntimeError(f"Variável de ambiente ausente: {nome_variavel}")
+    return valor
 
 
 @contextmanager
-def get_conn() -> Iterator[MySQLConnection]:
+def get_conn():
     """
-    Abre uma conexão com o MySQL e garante fechamento, mesmo se der erro.
-    Use: with get_conn() as conn: ...
+    Abre uma conexão com o MySQL e garante que ela será fechada no final.
+    Uso:
+        with get_conn() as conn:
+            ...
     """
-    conn: Optional[MySQLConnection] = None
+    conn = None
     try:
         conn = mysql.connector.connect(
             host=_get_env("DB_HOST"),
