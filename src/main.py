@@ -46,7 +46,7 @@ def main():
                 data = input("Data nascimento: ")
 
                 linhas = ClienteDAO.alterar(
-                    id_cliente, nome, cpf, telefone, email, data
+                    id_cliente , nome, cpf, telefone, email, data
                 )
 
                 print("Clientes alterados:", linhas)
@@ -58,7 +58,7 @@ def main():
                 clientes = ClienteDAO.pesquisar_por_nome(nome)
 
                 for c in clientes:
-                    print(c)
+                    print(c.id_cliente, c.nome, c.cpf, c.telefone, c.email, c.data_nascimento)
 
             elif opcao == "4":
 
@@ -73,7 +73,7 @@ def main():
                 clientes = ClienteDAO.listar_todos()
 
                 for c in clientes:
-                    print(c)
+                    print(c.id_cliente, c.nome, c.cpf, c.telefone, c.email, c.data_nascimento)
 
             elif opcao == "6":
 
@@ -81,7 +81,7 @@ def main():
 
                 cliente = ClienteDAO.buscar_por_id(id_cliente)
 
-                print(cliente)
+                print(cliente.id_cliente, cliente.nome, cliente.cpf, cliente.telefone, cliente.email, cliente.data_nascimento)
 
             elif opcao == "0":
 
