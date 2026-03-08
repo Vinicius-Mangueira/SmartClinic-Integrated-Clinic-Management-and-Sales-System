@@ -42,6 +42,9 @@ class Application():
         self.bt_excluir.place(relx=0.8, rely=0.01, relwidth=0.1, relheight=0.15)
         #Criação do label e entrada do codigo
         self.lb_codigo = Label(self.frame_1, text="Código",)
-        
+        self.lb_codigo.place(relx=0.01, rely=0.2, relwidth=0.1, relheight=0.15)
+
+        self.codigo_entry = Entry(self.frame_1)
+        self.codigo_entry.place(relx=0.1, rely=0.25, relwidth=0.1, relheight=0.15)
 
 Application()
