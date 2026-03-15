@@ -189,3 +189,34 @@ class ClienteDAO:
             finally:
                 if cursor:
                     cursor.close()
+    @staticmethod
+    def gerar_relatorio() -> dict:
+
+        sql = """
+        SELECT
+            COUNT(*) AS total_clientes,
+            COUNT(telefone) AS total_com_telefone,
+            COUNT(email) AS total_com_email
+        FROM cliente
+        """
+
+        with get_conn() as conn:
+            cursor = None
+            try:
+                cursor = conn.cursor()
+                cursor.execute(sql)
+
+                resultado = cursor.fetchone()
+
+                return {
+                    "total_clientes": resultado[0],
+                    "clientes_com_telefone": resultado[1],
+                    "clientes_com_email": resultado[2],
+                }
+
+            except Error as e:
+                raise RuntimeError(f"Erro ao gerar relatório: {e}")
+
+            finally:
+                if cursor:
+                    cursor.close()
