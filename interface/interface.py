@@ -140,7 +140,7 @@ class ClienteForm(tk.Toplevel):
         self.cliente  = cliente
         self.title("Novo Cliente" if not cliente else "Editar Cliente")
         self.configure(bg=BG_PANEL)
-        self.geometry("460x460")
+        self.geometry("480x560")
         self.resizable(False, False)
         self.grab_set()
         self._build()
@@ -148,10 +148,14 @@ class ClienteForm(tk.Toplevel):
     def _build(self):
         c = self.cliente
         editing = c is not None
+
+        # ── Cabeçalho
         tk.Label(self, text="Novo Cliente" if not editing else "Editar Cliente",
                  bg=BG_PANEL, fg=TEXT_PRI,
                  font=("Segoe UI", 15, "bold")).pack(pady=(20,12), padx=24, anchor="w")
+        tk.Frame(self, bg=BORDER, height=1).pack(fill="x", padx=24, pady=(0, 8))
 
+        # ── Campos
         self.e_nome  = labeled_entry(self, "Nome completo *",    c.nome             if c else "")
         self.e_cpf   = labeled_entry(self, "CPF *",              c.cpf              if c else "")
         self.e_tel   = labeled_entry(self, "Telefone",           c.telefone or ""   if c else "")
@@ -160,12 +164,17 @@ class ClienteForm(tk.Toplevel):
                                            c.data_nascimento or "" if c else "")
 
         tk.Label(self, text="* campos obrigatórios", bg=BG_PANEL,
-                 fg=TEXT_MUT, font=("Segoe UI", 8)).pack(padx=24, anchor="w")
+                 fg=TEXT_MUT, font=("Segoe UI", 8)).pack(padx=24, anchor="w", pady=(4, 0))
 
+        # ── Botões — sempre visíveis na parte de baixo
+        tk.Frame(self, bg=BORDER, height=1).pack(fill="x", padx=24, pady=(16, 0))
         btns = tk.Frame(self, bg=BG_PANEL)
-        btns.pack(fill="x", padx=24, pady=18)
-        styled_btn(btns, "Cancelar", bg=BG_CARD, fg=TEXT_SEC, cmd=self.destroy).pack(side="right")
-        styled_btn(btns, "💾  Salvar", bg=ACCENT_GREEN, cmd=self._salvar).pack(side="right", padx=(0,8))
+        btns.pack(fill="x", padx=24, pady=16)
+
+        styled_btn(btns, "✕  Cancelar", bg=BG_CARD, fg=TEXT_SEC,
+                   cmd=self.destroy).pack(side="left")
+        styled_btn(btns, "✔  Adicionar Cliente" if not editing else "✔  Salvar Alterações",
+                   bg=ACCENT_GREEN, cmd=self._salvar).pack(side="right")
 
     def _salvar(self):
         nome  = self.e_nome.get().strip()
