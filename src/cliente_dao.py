@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Optional
-
 from mysql.connector import Error
 from db import get_conn
 
-"""Definindo o dataclass Cliente para representar os dados de um cliente, 
-com campos correspondentes às colunas da tabela cliente no banco de dados"""
+
 @dataclass(frozen=True)
 class Cliente:
     id_cliente: int
@@ -14,206 +12,134 @@ class Cliente:
     telefone: Optional[str]
     email: str
     data_nascimento: Optional[str]
+    cidade: Optional[str]
+    torce_flamengo: bool
+    assiste_one_piece: bool
 
-"""Definindo a classe ClienteDAO para encapsular as operações de acesso a dados relacionadas aos clientes,
-com métodos estáticos para inserir, alterar, pesquisar, remover e listar clientes, bem como um método para gerar um relatório do sistema
-com base nos dados dos clientes"""
+    @property
+    def tem_desconto(self) -> bool:
+        return (self.torce_flamengo or self.assiste_one_piece or
+                (self.cidade or "").lower() == "sousa")
+
+
 class ClienteDAO:
 
-    @staticmethod
-    def inserir(nome : str, cpf : str, telefone : Optional[str], email : str, data_nascimento : Optional[str]) -> int:
-        sql = """
-        INSERT INTO cliente (nome, cpf, telefone, email, data_nascimento)
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        with get_conn() as conn:
-            cursor = None
-            try:
-                cursor = conn.cursor()
-                cursor.execute(sql, (nome, cpf, telefone, email, data_nascimento))
-                conn.commit()
-                return int(cursor.lastrowid)
-            
-            except Error as e:
-                conn.rollback()
-                raise RuntimeError(f"Erro ao inserir cliente: {e}")
-
-            finally:
-                if cursor:
-                    cursor.close()
+    _SEL = """SELECT id_cliente, nome, cpf, telefone, email,
+                     data_nascimento, cidade, torce_flamengo, assiste_one_piece
+              FROM cliente"""
 
     @staticmethod
-    def alterar(id_cliente, nome, cpf, telefone, email, data_nascimento) -> int:
-        sql = """
-        UPDATE cliente
-        SET nome=%s, cpf=%s, telefone=%s, email=%s, data_nascimento=%s
-        WHERE id_cliente=%s
-        """
-        #Abrindo conexão com o banco de dados e executando a query de atualização do cliente
-        with get_conn() as conn:
-            cursor = None
-            #Tratando possíveis erros durante a execução da query e garantindo o fechamento do cursor
-            try:
-                cursor = conn.cursor()
-
-                cursor.execute(
-                    sql,
-                    (nome, cpf, telefone, email, data_nascimento, id_cliente),
-                )
-
-                conn.commit()
-                return int(cursor.rowcount)
-
-            except Error as e:
-                conn.rollback()
-                raise RuntimeError(f"Erro ao alterar cliente: {e}")
-            finally:
-                if cursor:
-                    cursor.close()
+    def _row(r) -> 'Cliente':
+        return Cliente(r[0], r[1], r[2], r[3], r[4],
+                       str(r[5]) if r[5] else None,
+                       r[6], bool(r[7]), bool(r[8]))
 
     @staticmethod
-    def pesquisar_por_nome(parte_nome: str) -> List[Cliente]:
-
-        sql = """
-        SELECT id_cliente, nome, cpf, telefone, email, data_nascimento
-        FROM cliente
-        WHERE nome LIKE %s
-        ORDER BY nome
-        """
-        
+    def inserir(nome, cpf, telefone, email, data_nascimento,
+                cidade=None, torce_flamengo=False, assiste_one_piece=False) -> int:
+        sql = """INSERT INTO cliente
+                 (nome,cpf,telefone,email,data_nascimento,cidade,torce_flamengo,assiste_one_piece)
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
         with get_conn() as conn:
-            cursor = None
+            cur = conn.cursor()
             try:
-                cursor = conn.cursor()
-                cursor.execute(sql, (f"%{parte_nome}%",))
-
-                resultados = cursor.fetchall()
-                
-                return [Cliente(*linha) for linha in resultados]
-
+                cur.execute(sql, (nome, cpf, telefone, email, data_nascimento,
+                                  cidade, int(torce_flamengo), int(assiste_one_piece)))
+                conn.commit(); return int(cur.lastrowid)
             except Error as e:
-                raise RuntimeError(f"Erro ao pesquisar cliente: {e}")
-
+                conn.rollback(); raise RuntimeError(f"Erro ao inserir cliente: {e}")
             finally:
-                if cursor:
-                    cursor.close()
+                cur.close()
 
     @staticmethod
-    def remover(id_cliente: int) -> int:
-
-        sql = """
-        DELETE FROM cliente
-        WHERE id_cliente = %s
-        """
-        
+    def alterar(id_cliente, nome, cpf, telefone, email, data_nascimento,
+                cidade=None, torce_flamengo=False, assiste_one_piece=False) -> int:
+        sql = """UPDATE cliente
+                 SET nome=%s,cpf=%s,telefone=%s,email=%s,data_nascimento=%s,
+                     cidade=%s,torce_flamengo=%s,assiste_one_piece=%s
+                 WHERE id_cliente=%s"""
         with get_conn() as conn:
-
-            cursor = None
-        
+            cur = conn.cursor()
             try:
-                cursor = conn.cursor()
-                
-                cursor.execute(sql, (id_cliente,))
-                conn.commit()
-               
-                return int(cursor.rowcount)
-            
+                cur.execute(sql, (nome, cpf, telefone, email, data_nascimento,
+                                  cidade, int(torce_flamengo), int(assiste_one_piece),
+                                  id_cliente))
+                conn.commit(); return int(cur.rowcount)
             except Error as e:
-                conn.rollback()
-                raise RuntimeError(f"Erro ao remover cliente: {e}")
-
+                conn.rollback(); raise RuntimeError(f"Erro ao alterar cliente: {e}")
             finally:
-                if cursor:
-                    cursor.close()
+                cur.close()
 
     @staticmethod
-    def listar_todos() -> List[Cliente]:
-        #Definindo a query SQL para listar todos os clientes, ordenando por nome
-        sql = """
-        SELECT id_cliente, nome, cpf, telefone, email, data_nascimento
-        FROM cliente
-        ORDER BY nome
-        """
+    def pesquisar_por_nome(parte_nome) -> List['Cliente']:
         with get_conn() as conn:
-            cursor = None
+            cur = conn.cursor()
             try:
-                cursor = conn.cursor()
-
-                cursor.execute(sql)
-
-                resultados = cursor.fetchall()
-
-                return [Cliente(*linha) for linha in resultados]
-
+                cur.execute(ClienteDAO._SEL + " WHERE nome LIKE %s ORDER BY nome",
+                            (f"%{parte_nome}%",))
+                return [ClienteDAO._row(r) for r in cur.fetchall()]
             except Error as e:
-                raise RuntimeError(f"Erro ao listar clientes: {e}")
-
+                raise RuntimeError(f"Erro ao pesquisar: {e}")
             finally:
-                if cursor:
-                    cursor.close()
+                cur.close()
 
     @staticmethod
-    def buscar_por_id(id_cliente: int) -> Optional[Cliente]:
-
-        sql = """
-        SELECT id_cliente, nome, cpf, telefone, email, data_nascimento
-        FROM cliente
-        WHERE id_cliente = %s
-        """
-
+    def remover(id_cliente) -> int:
         with get_conn() as conn:
-            cursor = None
+            cur = conn.cursor()
             try:
-                cursor = conn.cursor()
-
-                cursor.execute(sql, (id_cliente,))
-
-                resultado = cursor.fetchone()
-                """Verificando se a consulta retornou um resultado e, em caso afirmativo, 
-                criando um objeto Cliente a partir dos dados retornados,
-                utilizando a sintaxe de unpacking para passar os valores das colunas 
-                como argumentos para o construtor do dataclass Cliente."""
-                if resultado:
-                #
-                    return Cliente(*resultado)
-
-                return None
-
+                cur.execute("DELETE FROM cliente WHERE id_cliente=%s", (id_cliente,))
+                conn.commit(); return int(cur.rowcount)
             except Error as e:
-                raise RuntimeError(f"Erro ao buscar cliente: {e}")
-
+                conn.rollback(); raise RuntimeError(f"Erro ao remover: {e}")
             finally:
-                if cursor:
-                    cursor.close()
-    #Gerar relatório do sistema, retornando um dicionário com o total de clientes, clientes com telefone e clientes com email
+                cur.close()
+
+    @staticmethod
+    def listar_todos() -> List['Cliente']:
+        with get_conn() as conn:
+            cur = conn.cursor()
+            try:
+                cur.execute(ClienteDAO._SEL + " ORDER BY nome")
+                return [ClienteDAO._row(r) for r in cur.fetchall()]
+            except Error as e:
+                raise RuntimeError(f"Erro ao listar: {e}")
+            finally:
+                cur.close()
+
+    @staticmethod
+    def buscar_por_id(id_cliente) -> Optional['Cliente']:
+        with get_conn() as conn:
+            cur = conn.cursor()
+            try:
+                cur.execute(ClienteDAO._SEL + " WHERE id_cliente=%s", (id_cliente,))
+                r = cur.fetchone()
+                return ClienteDAO._row(r) if r else None
+            except Error as e:
+                raise RuntimeError(f"Erro ao buscar: {e}")
+            finally:
+                cur.close()
+
     @staticmethod
     def gerar_relatorio() -> dict:
-
-        sql = """
-        SELECT
-            COUNT(*) AS total_clientes,
-            COUNT(telefone) AS total_com_telefone,
-            COUNT(email) AS total_com_email
-        FROM cliente
-        """
-
+        sql = """SELECT COUNT(*), COUNT(telefone), COUNT(email),
+                        SUM(torce_flamengo), SUM(assiste_one_piece),
+                        SUM(LOWER(cidade)='sousa')
+                 FROM cliente"""
         with get_conn() as conn:
-            cursor = None
+            cur = conn.cursor()
             try:
-                cursor = conn.cursor()
-                cursor.execute(sql)
-
-                resultado = cursor.fetchone()
-
+                cur.execute(sql)
+                r = cur.fetchone()
                 return {
-                    "total_clientes": resultado[0],
-                    "clientes_com_telefone": resultado[1],
-                    "clientes_com_email": resultado[2],
+                    "total_clientes":        r[0] or 0,
+                    "clientes_com_telefone": r[1] or 0,
+                    "clientes_com_email":    r[2] or 0,
+                    "torcem_flamengo":       r[3] or 0,
+                    "assistem_one_piece":    r[4] or 0,
+                    "de_sousa":              r[5] or 0,
                 }
-
             except Error as e:
-                raise RuntimeError(f"Erro ao gerar relatório: {e}")
-
+                raise RuntimeError(f"Erro no relatório: {e}")
             finally:
-                if cursor:
-                    cursor.close()
+                cur.close()
